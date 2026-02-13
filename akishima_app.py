@@ -18,7 +18,17 @@ def get_connection():
 def ingest_pdf(url, title):
     conn = get_connection()
     try:
-        response = requests.get(url)
+        # 対策1: ブラウザからのアクセスに見せかける設定を追加
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        
+        # 対策2: 取得した中身が本当にPDFかチェックする
+        if not response.content.startswith(b"%PDF"):
+            st.error("エラー: 指定されたURLは有効なPDFファイルではないようです。URLが '.pdf' で終わっているか確認してください。")
+            return False
+
         with pdfplumber.open(io.BytesIO(response.content)) as pdf:
             for i, page in enumerate(pdf.pages):
                 text = page.extract_text()
@@ -29,7 +39,6 @@ def ingest_pdf(url, title):
     except Exception as e:
         st.error(f"解析エラー: {e}")
         return False
-
 # --- メイン画面 ---
 st.title("🏙️ 昭島市政データ基盤 (v0.1)")
 
